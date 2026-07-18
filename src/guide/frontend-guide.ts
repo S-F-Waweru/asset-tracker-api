@@ -49,6 +49,7 @@
   .lesson-tab{border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer;font:600 .88rem var(--sans)}
   .lesson-tab:hover,.lesson-tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
   .lesson-panel{padding:30px 4px 20px;max-width:780px}.lesson-panel[hidden]{display:none}.lesson-panel .example-label{display:block;color:var(--accent);font:700 .72rem var(--mono);letter-spacing:.1em;margin:22px 0 6px}
+  .track-picker{margin:22px 0;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.track-picker h3{margin-top:0}.track-options{display:flex;flex-wrap:wrap;gap:8px}.track-option{border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);padding:9px 13px;cursor:pointer;font:600 .9rem var(--sans)}.track-option.active{background:var(--accent);border-color:var(--accent);color:white}.track-result{margin:14px 0 0;color:var(--muted)}
   code{font-family:var(--mono);font-size:.88em;color:var(--ink);background:var(--accent-soft);padding:2px 6px;border-radius:5px}
   pre{position:relative;margin:14px 0 20px;padding:20px;border:1px solid var(--line);border-radius:12px;
       overflow:auto;background:var(--bg-2);font-family:var(--mono);font-size:.86rem;line-height:1.55;color:var(--ink)}
@@ -231,6 +232,16 @@ loadAssets().then((assets) => {
 
   <h2 id="angular">Path B — Angular</h2>
   <p>This path shows the real production flow: <strong>UI → component → service → interceptor → API → typed response → UI</strong>.</p>
+  <section class="track-picker" aria-labelledby="track-heading">
+    <h3 id="track-heading">Choose an Angular integration track</h3>
+    <p>Choose one feature to focus on, or build both in one application. Authentication, the interceptor, and API configuration are shared by every track.</p>
+    <div class="track-options" role="group" aria-label="Angular integration track">
+      <button class="track-option active" type="button" data-track="assets">Assets</button>
+      <button class="track-option" type="button" data-track="blogs">Blogs</button>
+      <button class="track-option" type="button" data-track="both">Assets + blogs</button>
+    </div>
+    <p class="track-result" id="angular-track-result">Assets: build the protected portfolio list first. Your Angular route will be <code>/assets</code>.</p>
+  </section>
 
   <span class="step-label">STEP B1</span>
   <h3>Create and run the project</h3>
@@ -248,9 +259,11 @@ loadAssets().then((assets) => {
   <span class="step-label">STEP B3</span>
   <h3>Generate the feature files</h3>
   <pre><code>ng generate component features/auth/login --standalone
-ng generate component features/assets/asset-list --standalone
+ng generate component features/assets/asset-list --standalone          # Assets track
+ng generate component features/blogs/public-blog-feed --standalone     # Blogs track
 ng generate service core/auth
-ng generate service core/assets
+ng generate service core/assets                                        # Assets track
+ng generate service core/blogs                                         # Blogs track
 ng generate interceptor core/auth</code></pre>
 
   <span class="step-label">STEP B4</span>
@@ -293,6 +306,9 @@ export interface CreateAssetDto {
   purchasePrice: number; currency?: string;
 }
 export interface AssetPage { items: Asset[]; total: number; page: number; limit: number; }
+export interface Blog { id: number; title: string; content: string; published: boolean; createdAt: string; updatedAt: string; }
+export interface Comment { id: number; blogId: number; userId: number; content: string; createdAt: string; }
+export interface BlogPage { items: Blog[]; total: number; page: number; limit: number; sort?: string; }
 export interface ApiResponse&lt;T&gt; { success: true; data: T; }</code></pre>
 
   <span class="step-label">STEP B7</span>
@@ -352,8 +368,8 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 };</code></pre>
 
   <span class="step-label">STEP B9</span>
-  <h3>Assets service</h3>
-  <p>Replace <code>src/app/core/assets.service.ts</code>. No Authorization header here — the interceptor already added it.</p>
+  <h3>Feature services</h3>
+  <p>For the Assets track, create <code>src/app/core/assets.service.ts</code>. No Authorization header here — the interceptor already added it.</p>
   <pre><code>import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -374,6 +390,26 @@ export class AssetsService {
   }
   remove(id: number): Observable&lt;ApiResponse&lt;{ id: number }&gt;&gt; {
     return this.http.delete&lt;ApiResponse&lt;{ id: number }&gt;&gt;(this.apiUrl + '/' + id);
+  }
+}</code></pre>
+
+  <p>For the Blogs track, create <code>src/app/core/blogs.service.ts</code>. The public feed needs no token; creating a comment does, and the interceptor adds it automatically.</p>
+  <pre><code>import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { ApiResponse, Blog, BlogPage, Comment } from './api.models';
+import { environment } from '../../environments/environment';
+
+@Injectable({ providedIn: 'root' })
+export class BlogsService {
+  private readonly apiUrl = environment.apiUrl + '/blogs';
+  constructor(private http: HttpClient) {}
+
+  publicFeed(sort = 'newest') {
+    const params = new HttpParams().set('sort', sort);
+    return this.http.get&lt;ApiResponse&lt;BlogPage&gt;&gt;(this.apiUrl + '/public/feed', { params });
+  }
+  comment(blogId: number, content: string) {
+    return this.http.post&lt;ApiResponse&lt;Comment&gt;&gt;(this.apiUrl + '/' + blogId + '/comments', { content });
   }
 }</code></pre>
 
@@ -407,6 +443,27 @@ export class LoginComponent {
       error: (err) => { this.error = err.error?.message ?? 'Login failed'; this.loading = false; },
     });
   }
+  }</code></pre>
+
+  <p>For the Blogs track, create <code>src/app/features/blogs/public-blog-feed/public-blog-feed.component.ts</code>. It demonstrates a public request, a sort selector, and an authenticated action in the same screen.</p>
+  <pre><code>import { Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Blog } from '../../../core/api.models';
+import { BlogsService } from '../../../core/blogs.service';
+
+@Component({
+  selector: 'app-public-blog-feed', standalone: true, imports: [FormsModule],
+  template: \`&lt;h1&gt;Public blogs&lt;/h1&gt;
+  &lt;select [(ngModel)]="sort" (change)="load()"&gt;
+    &lt;option value="newest"&gt;Newest&lt;/option&gt;&lt;option value="oldest"&gt;Oldest&lt;/option&gt;&lt;option value="title"&gt;Title&lt;/option&gt;
+  &lt;/select&gt;
+  @for (blog of blogs; track blog.id) { &lt;article&gt;&lt;h2&gt;{{ blog.title }}&lt;/h2&gt;&lt;p&gt;{{ blog.content }}&lt;/p&gt;&lt;/article&gt; }\`,
+})
+export class PublicBlogFeedComponent implements OnInit {
+  private blogsApi = inject(BlogsService);
+  blogs: Blog[] = []; sort = 'newest';
+  ngOnInit(): void { this.load(); }
+  load(): void { this.blogsApi.publicFeed(this.sort).subscribe((result) => this.blogs = result.data.items); }
 }</code></pre>
 
   <span class="step-label">STEP B11</span>
@@ -444,16 +501,34 @@ export class AssetListComponent implements OnInit {
 
   <span class="step-label">STEP B12</span>
   <h3>Routes</h3>
-  <p>Replace <code>src/app/app.routes.ts</code>, then place <code>&lt;router-outlet /&gt;</code> in your root component template.</p>
+  <p>Replace <code>src/app/app.routes.ts</code>, then place <code>&lt;router-outlet /&gt;</code> in your root component template. Add the navigation tabs below so a user can choose the Assets or Blogs route.</p>
   <pre><code>import { Routes } from '@angular/router';
 import { LoginComponent } from './features/auth/login/login.component';
 import { AssetListComponent } from './features/assets/asset-list/asset-list.component';
+import { PublicBlogFeedComponent } from './features/blogs/public-blog-feed/public-blog-feed.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'assets', component: AssetListComponent },
+  { path: 'blogs', component: PublicBlogFeedComponent },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
 ];</code></pre>
+
+  <p>Create <code>src/app/shared/feature-tabs.component.ts</code>. <code>routerLinkActive</code> marks the route the user is currently viewing.</p>
+  <pre><code>import { Component } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+
+@Component({
+  selector: 'app-feature-tabs', standalone: true,
+  imports: [RouterLink, RouterLinkActive],
+  template: \`&lt;nav aria-label="Features"&gt;
+    &lt;a routerLink="/assets" routerLinkActive="active"&gt;Assets&lt;/a&gt;
+    &lt;a routerLink="/blogs" routerLinkActive="active"&gt;Blogs&lt;/a&gt;
+  &lt;/nav&gt;\`,
+})
+export class FeatureTabsComponent {}</code></pre>
+
+  <p>Import <code>FeatureTabsComponent</code> into the root component and put <code>&lt;app-feature-tabs /&gt;</code> above <code>&lt;router-outlet /&gt;</code>. If an intern chooses only one track, they may remove the unused route and its tab.</p>
 
   <span class="step-label">STEP B13</span>
   <h3>Verify the whole flow</h3>
@@ -461,7 +536,8 @@ export const routes: Routes = [
     <li>Register a user via <code>/reference</code>, or a form calling <code>AuthService.register()</code>.</li>
     <li>Open <code>http://localhost:4200/login</code> and sign in.</li>
     <li>DevTools → Application → Session Storage: confirm <code>assetTrackerToken</code> exists.</li>
-    <li>DevTools → Network → visit <code>/assets</code> and confirm the request carries <code>Authorization: Bearer ...</code>.</li>
+    <li><strong>Assets track:</strong> visit <code>/assets</code> and confirm the request carries <code>Authorization: Bearer ...</code>.</li>
+    <li><strong>Blogs track:</strong> visit <code>/blogs</code>, change the sort selector, and confirm the request to <code>/blogs/public/feed?sort=...</code> works without a token.</li>
     <li>Confirm the response body has <code>success</code> and <code>data.items</code>.</li>
   </ol>
 
@@ -543,6 +619,20 @@ export const routes: Routes = [
     }
     lessonTabs.forEach(function (tab) {
       tab.addEventListener('click', function () { activateLesson(tab); });
+    });
+
+    var trackButtons = document.querySelectorAll('[data-track]');
+    var trackResult = document.getElementById('angular-track-result');
+    var trackMessages = {
+      assets: 'Assets: build the protected portfolio list first. Your Angular route will be /assets.',
+      blogs: 'Blogs: build the public feed first, then add authenticated comments. Your Angular route will be /blogs.',
+      both: 'Assets + blogs: share auth and the interceptor, then use the navigation tabs to switch between /assets and /blogs.',
+    };
+    trackButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        trackButtons.forEach(function (item) { item.classList.toggle('active', item === button); });
+        trackResult.textContent = trackMessages[button.dataset.track];
+      });
     });
   })();
 </script>
