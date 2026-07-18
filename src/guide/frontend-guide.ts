@@ -45,6 +45,11 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
   .grid .card{margin:0}
   .grid .card b{display:block;color:var(--accent);font-size:.85rem;margin-bottom:4px}
+  .lesson-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .lesson-tab{border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer;font:600 .88rem var(--sans)}
+  .lesson-tab:hover,.lesson-tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .lesson-panel{display:none;padding:30px 4px 20px;max-width:780px}.lesson-panel.active{display:block}
+  .lesson-panel h3{margin-top:0;font-size:1.35rem}.lesson-panel .example-label{display:block;color:var(--accent);font:700 .72rem var(--mono);letter-spacing:.1em;margin:22px 0 6px}
   code{font-family:var(--mono);font-size:.88em;color:var(--ink);background:var(--accent-soft);padding:2px 6px;border-radius:5px}
   pre{position:relative;margin:14px 0 20px;padding:20px;border:1px solid var(--line);border-radius:12px;
       overflow:auto;background:var(--bg-2);font-family:var(--mono);font-size:.86rem;line-height:1.55;color:var(--ink)}
@@ -81,13 +86,40 @@
   </nav>
 
   <h2 id="architecture">Concepts you'll use</h2>
-  <div class="grid">
-    <div class="card"><b>Component</b>Owns one visible piece of UI, e.g. the login form or the asset list.</div>
-    <div class="card"><b>Service</b>Plain class that talks to the API. No HTML lives here.</div>
-    <div class="card"><b>HttpClient</b>Angular's HTTP tool. Sends typed requests, returns Observables.</div>
-    <div class="card"><b>Interceptor</b>Runs on every outgoing request. Ours attaches the JWT automatically.</div>
-    <div class="card"><b>Guard</b>Blocks a route until the user is authenticated.</div>
+  <p>Choose a tab, read the explanation, then study the small example. These concepts appear repeatedly in the Angular path below.</p>
+  <div class="lesson-tabs" role="tablist" aria-label="Angular concepts">
+    <button class="lesson-tab" role="tab" aria-selected="true" aria-controls="concept-component" id="tab-component">Component</button>
+    <button class="lesson-tab" role="tab" aria-selected="false" aria-controls="concept-template" id="tab-template">Template &amp; directives</button>
+    <button class="lesson-tab" role="tab" aria-selected="false" aria-controls="concept-service" id="tab-service">Service</button>
+    <button class="lesson-tab" role="tab" aria-selected="false" aria-controls="concept-http" id="tab-http">HttpClient</button>
+    <button class="lesson-tab" role="tab" aria-selected="false" aria-controls="concept-interceptor" id="tab-interceptor">Interceptor</button>
+    <button class="lesson-tab" role="tab" aria-selected="false" aria-controls="concept-guard" id="tab-guard">Guard</button>
+    <button class="lesson-tab" role="tab" aria-selected="false" aria-controls="concept-pipe" id="tab-pipe">Pipes</button>
   </div>
+  <section class="lesson-panel active" role="tabpanel" id="concept-component" aria-labelledby="tab-component"><h3>Component</h3><p>A component is one visible part of the application. It combines a TypeScript class (data and actions) with an HTML template (what the learner sees). Keep the component focused on the screen: it stores UI state and calls services; it should not know the low-level details of HTTP headers.</p><p><strong>Use it when:</strong> you need a page or reusable UI feature, such as login, asset list, asset form, or portfolio summary. <strong>Common mistake:</strong> putting API URLs and token headers directly in the component. Put those in a service/interceptor instead, so the same logic can be reused safely.</p><span class="example-label">EXAMPLE: LOGIN SCREEN STATE</span><pre><code>export class LoginComponent {
+  email = '';
+  password = '';
+  loading = false;
+  error = '';
+}</code></pre></section>
+  <section class="lesson-panel" role="tabpanel" id="concept-template" aria-labelledby="tab-template"><h3>Template and directives</h3><p>The template is the component's HTML. Directives add Angular behaviour to normal HTML. Use <code>*ngIf</code> to conditionally show an error, <code>*ngFor</code> to repeat one element for every asset, and event bindings such as <code>(click)</code> or <code>(ngSubmit)</code> to run a component method.</p><p><strong>Use it when:</strong> the page needs to react to data or user actions. The template does not fetch data itself; it displays component properties. <strong>Common mistake:</strong> forgetting to import <code>CommonModule</code> for <code>*ngIf</code>/<code>*ngFor</code>, or <code>FormsModule</code> for <code>[(ngModel)]</code> in a standalone component.</p><span class="example-label">EXAMPLE: RENDERING ASSETS</span><pre><code>&lt;p *ngIf="error"&gt;{{ error }}&lt;/p&gt;
+&lt;li *ngFor="let asset of assets"&gt;
+  {{ asset.name }} - {{ asset.quantity }}
+&lt;/li&gt;</code></pre></section>
+  <section class="lesson-panel" role="tabpanel" id="concept-service" aria-labelledby="tab-service"><h3>Service</h3><p>A service is an injectable TypeScript class for reusable work. <code>AuthService</code> owns login, logout, and token storage. <code>AssetsService</code> owns asset API requests. Multiple components can reuse the same service, which prevents duplicated code.</p><p><strong>Use it when:</strong> more than one component could need the same data or action, or when an action is not about rendering a page. <strong>Common mistake:</strong> creating a service instance with <code>new</code>. Let Angular inject it with <code>inject()</code> or the constructor so one shared service is used.</p><span class="example-label">EXAMPLE: COMPONENT CALLS A SERVICE</span><pre><code>this.auth.login(this.email, this.password).subscribe({
+  next: () =&gt; this.router.navigateByUrl('/assets'),
+});</code></pre></section>
+  <section class="lesson-panel" role="tabpanel" id="concept-http" aria-labelledby="tab-http"><h3>HttpClient</h3><p><code>HttpClient</code> is Angular's browser API client. A typed request tells TypeScript the JSON shape you expect. It returns an Observable because the network response arrives later. Call <code>subscribe</code> to react to success or failure.</p><p><strong>Use it when:</strong> calling the Render URL for login, registration, assets, valuations, summaries, or performance. <strong>Common mistake:</strong> treating an Observable like the final JSON value. The request has not completed until code inside <code>subscribe({ next, error })</code> runs.</p><span class="example-label">EXAMPLE: TYPED GET REQUEST</span><pre><code>this.http.get&lt;ApiResponse&lt;AssetPage&gt;&gt;(
+  this.apiUrl + '/assets'
+);</code></pre></section>
+  <section class="lesson-panel" role="tabpanel" id="concept-interceptor" aria-labelledby="tab-interceptor"><h3>Interceptor</h3><p>An interceptor is a shared checkpoint for every HttpClient request. Instead of every asset method manually adding a bearer token, the interceptor reads the saved JWT once and adds the header to outgoing protected requests.</p><p><strong>Use it when:</strong> every protected request needs the same behaviour, especially JWT attachment or a consistent 401 redirect. <strong>Common mistake:</strong> changing the original request. Angular requests are immutable, so use <code>request.clone()</code> as the example shows.</p><span class="example-label">EXAMPLE: ADDING THE JWT</span><pre><code>return next(request.clone({
+  setHeaders: { Authorization: 'Bearer ' + token },
+}));</code></pre></section>
+  <section class="lesson-panel" role="tabpanel" id="concept-guard" aria-labelledby="tab-guard"><h3>Guard</h3><p>A guard controls navigation in the frontend. Before showing <code>/assets</code>, it checks whether the user has a stored token. If not, it redirects to <code>/login</code>. It improves user experience, but the API's JWT validation remains the real security boundary.</p><p><strong>Use it when:</strong> a route should make no sense without a signed-in user. <strong>Common mistake:</strong> thinking the guard secures the API. A learner can bypass frontend JavaScript, which is why the Render API still verifies the JWT for every asset request.</p><span class="example-label">EXAMPLE: SIMPLE DECISION</span><pre><code>return auth.isLoggedIn()
+  ? true
+  : router.createUrlTree(['/login']);</code></pre></section>
+  <section class="lesson-panel" role="tabpanel" id="concept-pipe" aria-labelledby="tab-pipe"><h3>Pipes</h3><p>Pipes format data only for display. They do not change the API response or database value. Use Angular's built-in <code>currency</code> pipe for a price and <code>date</code> pipe for timestamps so UI formatting stays out of component code.</p><p><strong>Use it when:</strong> you have a raw value from the API that needs a user-friendly display. <strong>Common mistake:</strong> formatting values in the service, which mixes display concerns with API logic and makes reuse harder.</p><span class="example-label">EXAMPLE: FRIENDLY DISPLAY</span><pre><code>&lt;p&gt;{{ asset.purchasePrice | currency:asset.currency }}&lt;/p&gt;
+&lt;p&gt;Created {{ asset.createdAt | date }}&lt;/p&gt;</code></pre></section>
   <div class="note"><strong>The full journey:</strong> a click in a component → the component calls a service → <code>HttpClient</code> builds the request → the interceptor adds the JWT → the API checks the token → typed JSON comes back → the component updates the page.</div>
 
   <h2 id="start">Step 1 — Start the API</h2>
@@ -95,9 +127,9 @@
     <li>Open a terminal in the API project.</li>
     <li>Install dependencies once: <code>npm install</code></li>
     <li>Start the dev server: <code>npm run start:dev</code></li>
-    <li>Open <a href="http://localhost:3000/reference">http://localhost:3000/reference</a> — this is the live Scalar reference for every endpoint. If it loads, the API is ready.</li>
+    <li>Open <a href="https://asset-tracker-api-6fs8.onrender.com/reference">https://asset-tracker-api-6fs8.onrender.com/reference</a> — this is the live Scalar reference for every endpoint. If it loads, the API is ready.</li>
   </ol>
-  <div class="note"><strong>Base URL:</strong> everything in this guide starts with <code>http://localhost:3000</code>. Login is <code>http://localhost:3000/auth/login</code>.</div>
+  <div class="note"><strong>Live API base URL:</strong> every API request in this guide starts with <code>https://asset-tracker-api-6fs8.onrender.com</code>. For example, login is <code>https://asset-tracker-api-6fs8.onrender.com/auth/login</code>.</div>
 
   <h2 id="flow">Step 2 — The request flow</h2>
   <ol>
@@ -113,7 +145,7 @@
   <h2 id="test">Step 3 — Test the API before writing any frontend code</h2>
   <p>Proving the API works first makes it much easier to tell a backend bug from a frontend bug later.</p>
   <ol>
-    <li>Open <a href="http://localhost:3000/reference">/reference</a>.</li>
+    <li>Open <a href="https://asset-tracker-api-6fs8.onrender.com/reference">the live /reference page</a>.</li>
     <li>Under <strong>Authentication</strong>, call <code>POST /auth/register</code> with an unused email and a 6+ character password.</li>
     <li>Call <code>POST /auth/login</code> and copy the returned <code>access_token</code>.</li>
     <li>Click <strong>Authorize</strong>, paste the token.</li>
@@ -130,9 +162,23 @@
   <h2 id="js">Path A — Plain JavaScript</h2>
 
   <span class="step-label">STEP A1</span>
+  <h3>Keep the API URL in one configuration file</h3>
+  <p>Do not repeat the URL in every JavaScript file. Create <code>api-config.js</code> and change only <code>useProductionApi</code> when switching between local development and the deployed Render API.</p>
+  <pre><code>const useProductionApi = false;
+
+const API_URLS = {
+  development: 'http://localhost:3000',
+  production: 'https://asset-tracker-api-6fs8.onrender.com',
+};
+
+export const API_URL = useProductionApi
+  ? API_URLS.production
+  : API_URLS.development;</code></pre>
+
+  <span class="step-label">STEP A2</span>
   <h3>A small API helper</h3>
-  <p>Create <code>api.js</code>. It attaches the token when one exists, parses JSON, and turns error responses into thrown errors.</p>
-  <pre><code>const API_URL = 'http://localhost:3000';
+  <p>Create <code>api.js</code>. It imports the one API URL, attaches the token when one exists, parses JSON, and turns error responses into thrown errors.</p>
+  <pre><code>import { API_URL } from './api-config.js';
 
 export async function request(path, options = {}) {
   const token = sessionStorage.getItem('assetTrackerToken');
@@ -151,7 +197,7 @@ export async function request(path, options = {}) {
   return body;
 }</code></pre>
 
-  <span class="step-label">STEP A2</span>
+  <span class="step-label">STEP A3</span>
   <h3>Log in and store the token</h3>
   <pre><code>import { request } from './api.js';
 
@@ -163,7 +209,7 @@ export async function login(email, password) {
   sessionStorage.setItem('assetTrackerToken', result.access_token);
 }</code></pre>
 
-  <span class="step-label">STEP A3</span>
+  <span class="step-label">STEP A4</span>
   <h3>Load and render assets</h3>
   <p>Every response is wrapped by the API's global interceptor, so read the payload from <code>result.data</code>, not <code>result</code> directly.</p>
   <pre><code>export async function loadAssets() {
@@ -186,12 +232,12 @@ loadAssets().then((assets) => {
     <li>Install the CLI once: <code>npm install -g @angular/cli</code></li>
     <li><code>ng new asset-tracker-web --standalone --routing --style=css</code></li>
     <li><code>cd asset-tracker-web && ng serve</code></li>
-    <li>Open <code>http://localhost:4200</code>. Leave the API running on port 3000 at the same time.</li>
+    <li>Open <code>http://localhost:4200</code>. Your frontend runs locally, but it will call the live Render API.</li>
   </ol>
 
   <span class="step-label">STEP B2</span>
   <h3>CORS is already open for this origin</h3>
-  <p>The API's <code>main.ts</code> currently allows exactly one origin: <code>http://localhost:4200</code>. This is hard-coded, not read from an environment variable — keep that in mind for the deployment step below.</p>
+  <p>The deployed API accepts frontend origins configured through its <code>CORS_ORIGIN</code> setting. For local Angular development, ensure the Render service permits <code>http://localhost:4200</code>. When you deploy the Angular app, add its final HTTPS URL there too. This is configuration, not code the intern needs to change.</p>
 
   <span class="step-label">STEP B3</span>
   <h3>Generate the feature files</h3>
@@ -213,6 +259,21 @@ export const appConfig: ApplicationConfig = {
 };</code></pre>
 
   <span class="step-label">STEP B5</span>
+  <h3>Configure the API URL once for Angular</h3>
+  <p>Run <code>ng generate environments</code> in the Angular project first. The CLI creates and configures the environment files. Then replace their contents with the values below. Angular uses the development value with <code>ng serve</code> and the production value when you build with the production configuration.</p>
+  <pre><code>// src/environments/environment.ts — used by ng serve
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:3000',
+};
+
+// src/environments/environment.production.ts — used by production builds
+export const environment = {
+  production: true,
+  apiUrl: 'https://asset-tracker-api-6fs8.onrender.com',
+};</code></pre>
+
+  <span class="step-label">STEP B6</span>
   <h3>Type the API responses</h3>
   <p>Create <code>src/app/core/api.models.ts</code>:</p>
   <pre><code>export interface LoginResponse { access_token: string; }
@@ -228,17 +289,18 @@ export interface CreateAssetDto {
 export interface AssetPage { items: Asset[]; total: number; page: number; limit: number; }
 export interface ApiResponse&lt;T&gt; { success: true; data: T; }</code></pre>
 
-  <span class="step-label">STEP B6</span>
+  <span class="step-label">STEP B7</span>
   <h3>Auth service</h3>
   <p>Replace <code>src/app/core/auth.service.ts</code>:</p>
   <pre><code>import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { LoginResponse } from './api.models';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly apiUrl = 'http://localhost:3000';
+  private readonly apiUrl = environment.apiUrl;
   private readonly tokenKey = 'assetTrackerToken';
   constructor(private http: HttpClient) {}
 
@@ -255,7 +317,7 @@ export class AuthService {
   logout(): void { sessionStorage.removeItem(this.tokenKey); }
 }</code></pre>
 
-  <span class="step-label">STEP B7</span>
+  <span class="step-label">STEP B8</span>
   <h3>Attach the JWT automatically</h3>
   <p>Replace <code>src/app/core/auth.interceptor.ts</code>:</p>
   <pre><code>import { HttpInterceptorFn } from '@angular/common/http';
@@ -266,17 +328,18 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   return next(request.clone({ setHeaders: { Authorization: 'Bearer ' + token } }));
 };</code></pre>
 
-  <span class="step-label">STEP B8</span>
+  <span class="step-label">STEP B9</span>
   <h3>Assets service</h3>
   <p>Replace <code>src/app/core/assets.service.ts</code>. No Authorization header here — the interceptor already added it.</p>
   <pre><code>import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse, Asset, AssetPage, CreateAssetDto } from './api.models';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AssetsService {
-  private readonly apiUrl = 'http://localhost:3000/assets';
+  private readonly apiUrl = environment.apiUrl + '/assets';
   constructor(private http: HttpClient) {}
 
   list(page = 1, limit = 10): Observable&lt;ApiResponse&lt;AssetPage&gt;&gt; {
@@ -291,7 +354,7 @@ export class AssetsService {
   }
 }</code></pre>
 
-  <span class="step-label">STEP B9</span>
+  <span class="step-label">STEP B10</span>
   <h3>Login component</h3>
   <p>Replace <code>src/app/features/auth/login/login.component.ts</code>:</p>
   <pre><code>import { Component, inject } from '@angular/core';
@@ -321,7 +384,7 @@ export class LoginComponent {
   }
 }</code></pre>
 
-  <span class="step-label">STEP B10</span>
+  <span class="step-label">STEP B11</span>
   <h3>Asset list component</h3>
   <p>Replace <code>src/app/features/assets/asset-list/asset-list.component.ts</code>:</p>
   <pre><code>import { Component, OnInit, inject } from '@angular/core';
@@ -347,7 +410,7 @@ export class AssetListComponent implements OnInit {
   }
 }</code></pre>
 
-  <span class="step-label">STEP B11</span>
+  <span class="step-label">STEP B12</span>
   <h3>Routes</h3>
   <p>Replace <code>src/app/app.routes.ts</code>, then place <code>&lt;router-outlet /&gt;</code> in your root component template.</p>
   <pre><code>import { Routes } from '@angular/router';
@@ -360,7 +423,7 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
 ];</code></pre>
 
-  <span class="step-label">STEP B12</span>
+  <span class="step-label">STEP B13</span>
   <h3>Verify the whole flow</h3>
   <ol>
     <li>Register a user via <code>/reference</code>, or a form calling <code>AuthService.register()</code>.</li>
@@ -430,6 +493,20 @@ export const routes: Routes = [
         localStorage.setItem('asset-tracker-guide-theme', b.dataset.themeBtn);
         apply(b.dataset.themeBtn);
       });
+    });
+
+    var lessonTabs = document.querySelectorAll('.lesson-tab');
+    var lessonPanels = document.querySelectorAll('.lesson-panel');
+    function activateLesson(tab) {
+      lessonTabs.forEach(function (item) {
+        item.setAttribute('aria-selected', String(item === tab));
+      });
+      lessonPanels.forEach(function (panel) {
+        panel.classList.toggle('active', panel.id === tab.getAttribute('aria-controls'));
+      });
+    }
+    lessonTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () { activateLesson(tab); });
     });
   })();
 </script>
