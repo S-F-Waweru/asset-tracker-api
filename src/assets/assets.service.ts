@@ -27,7 +27,7 @@ export class AssetsService {
 
     const [items, total] = await this.assetsRepo.findAndCount({
       where,
-      relations: ['valuations'],
+      relations: { valuations: true },
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
@@ -39,7 +39,7 @@ export class AssetsService {
   async findOne(userId: number, id: number) {
     const asset = await this.assetsRepo.findOne({
       where: { id, userId },
-      relations: ['valuations'],
+      relations: { valuations: true },
     });
     if (!asset) throw new NotFoundException('Asset not found');
     return asset;
@@ -94,7 +94,7 @@ export class AssetsService {
   async getSummary(userId: number) {
     const assets = await this.assetsRepo.find({
       where: { userId },
-      relations: ['valuations'],
+      relations: { valuations: true },
     });
 
     const byType: Record<string, number> = {};
