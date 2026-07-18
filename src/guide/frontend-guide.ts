@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Asset Tracker API — Frontend Integration Guide</title>
+<title>Frontend Integration Guide</title>
 <style>
   :root{
     --bg:#0b0f17; --bg-2:#10151f; --panel:#141a26; --line:#232c3d;
@@ -50,6 +50,7 @@
   .lesson-tab:hover,.lesson-tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
   .lesson-panel{padding:30px 4px 20px;max-width:780px}.lesson-panel[hidden]{display:none}.lesson-panel .example-label{display:block;color:var(--accent);font:700 .72rem var(--mono);letter-spacing:.1em;margin:22px 0 6px}
   .track-picker{margin:22px 0;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.track-picker h3{margin-top:0}.track-options{display:flex;flex-wrap:wrap;gap:8px}.track-option{border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);padding:9px 13px;cursor:pointer;font:600 .9rem var(--sans)}.track-option.active{background:var(--accent);border-color:var(--accent);color:white}.track-result{margin:14px 0 0;color:var(--muted)}
+  .feature-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0;border-bottom:1px solid var(--line);padding-bottom:12px}.feature-tab{border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);padding:9px 15px;cursor:pointer;font:600 .9rem var(--sans)}.feature-tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}.feature-panel{padding-top:8px}.feature-panel[hidden]{display:none}
   code{font-family:var(--mono);font-size:.88em;color:var(--ink);background:var(--accent-soft);padding:2px 6px;border-radius:5px}
   pre{position:relative;margin:14px 0 20px;padding:20px;border:1px solid var(--line);border-radius:12px;
       overflow:auto;background:var(--bg-2);font-family:var(--mono);font-size:.86rem;line-height:1.55;color:var(--ink)}
@@ -75,9 +76,9 @@
 </div>
 <main class="shell">
 
-  <div class="kicker">Intern onboarding · Asset Tracker API</div>
-  <h1>Connect a frontend to the Asset Tracker API</h1>
-  <p class="lead">A hands-on path from an empty project to a working login screen and a JWT-authenticated asset list, using the API exactly as it's built today — no extra services, no assumed features.</p>
+  <div class="kicker">Intern onboarding · Frontend integrations</div>
+  <h1>Connect an Angular frontend to the API</h1>
+  <p class="lead">A hands-on path from an empty project to a working Angular application with login, protected features, and public content. Choose the Assets track, the Blogs track, or combine both when you are ready.</p>
 
   <nav>
     <a href="#start">Start API</a><a href="#flow">Request flow</a><a href="#test">Test first</a>
@@ -232,16 +233,13 @@ loadAssets().then((assets) => {
 
   <h2 id="angular">Path B — Angular</h2>
   <p>This path shows the real production flow: <strong>UI → component → service → interceptor → API → typed response → UI</strong>.</p>
-  <section class="track-picker" aria-labelledby="track-heading">
-    <h3 id="track-heading">Choose an Angular integration track</h3>
-    <p>Choose one feature to focus on, or build both in one application. Authentication, the interceptor, and API configuration are shared by every track.</p>
-    <div class="track-options" role="group" aria-label="Angular integration track">
-      <button class="track-option active" type="button" data-track="assets">Assets</button>
-      <button class="track-option" type="button" data-track="blogs">Blogs</button>
-      <button class="track-option" type="button" data-track="both">Assets + blogs</button>
-    </div>
-    <p class="track-result" id="angular-track-result">Assets: build the protected portfolio list first. Your Angular route will be <code>/assets</code>.</p>
-  </section>
+  <div class="feature-tabs" role="tablist" aria-label="Angular integration guides">
+    <button class="feature-tab" role="tab" aria-selected="true" aria-controls="angular-assets" id="angular-assets-tab">Assets</button>
+    <button class="feature-tab" role="tab" aria-selected="false" aria-controls="angular-blogs" id="angular-blogs-tab">Blogs</button>
+    <button class="feature-tab" role="tab" aria-selected="false" aria-controls="angular-both" id="angular-both-tab">Both</button>
+  </div>
+
+  <section class="feature-panel" role="tabpanel" id="angular-assets" aria-labelledby="angular-assets-tab">
 
   <span class="step-label">STEP B1</span>
   <h3>Create and run the project</h3>
@@ -540,6 +538,42 @@ export class FeatureTabsComponent {}</code></pre>
     <li><strong>Blogs track:</strong> visit <code>/blogs</code>, change the sort selector, and confirm the request to <code>/blogs/public/feed?sort=...</code> works without a token.</li>
     <li>Confirm the response body has <code>success</code> and <code>data.items</code>.</li>
   </ol>
+  </section>
+
+  <section class="feature-panel" role="tabpanel" id="angular-blogs" aria-labelledby="angular-blogs-tab" hidden>
+    <span class="step-label">BLOGS TRACK</span>
+    <h3>Build a public blog feed</h3>
+    <p>This route is designed for visitors: it reads published posts without a token. Start by generating <code>features/blogs/public-blog-feed</code> and <code>core/blogs</code>.</p>
+    <pre><code>ng generate component features/blogs/public-blog-feed --standalone
+ng generate service core/blogs</code></pre>
+    <h3>Call the public feed</h3>
+    <p>Use <code>GET /blogs/public/feed?sort=newest</code>. The API supports <code>newest</code>, <code>oldest</code>, and <code>title</code> sorting. Read the posts from <code>result.data.items</code>.</p>
+    <pre><code>publicFeed(sort = 'newest') {
+  return this.http.get(this.apiUrl + '/blogs/public/feed', {
+    params: { sort },
+  });
+}</code></pre>
+    <h3>Add the Blogs route</h3>
+    <p>Register <code>{ path: 'blogs', component: PublicBlogFeedComponent }</code> in <code>app.routes.ts</code>. The app navigation tab should use <code>routerLink=&quot;/blogs&quot;</code>.</p>
+    <h3>Extend the exercise</h3>
+    <ol>
+      <li>Display a loading state, an empty state, and an error message.</li>
+      <li>Add a select control that reloads the feed when the sort changes.</li>
+      <li>After signing in, call <code>POST /blogs/:id/comments</code> to add a comment to a published post.</li>
+      <li>Open <code>/blogs</code> in DevTools and confirm that the public feed works without an Authorization header.</li>
+    </ol>
+  </section>
+
+  <section class="feature-panel" role="tabpanel" id="angular-both" aria-labelledby="angular-both-tab" hidden>
+    <span class="step-label">COMBINED TRACK</span>
+    <h3>Use both features in one Angular app</h3>
+    <p>Complete the Assets and Blogs tabs, then keep both routes. The same API URL configuration, authentication service, and HTTP interceptor support the whole app.</p>
+    <pre><code>&lt;nav&gt;
+  &lt;a routerLink=&quot;/assets&quot; routerLinkActive=&quot;active&quot;&gt;Assets&lt;/a&gt;
+  &lt;a routerLink=&quot;/blogs&quot; routerLinkActive=&quot;active&quot;&gt;Blogs&lt;/a&gt;
+&lt;/nav&gt;
+&lt;router-outlet /&gt;</code></pre>
+  </section>
 
   <h2 id="errors">Step 4 — Handle status codes</h2>
   <table>
@@ -621,17 +655,12 @@ export class FeatureTabsComponent {}</code></pre>
       tab.addEventListener('click', function () { activateLesson(tab); });
     });
 
-    var trackButtons = document.querySelectorAll('[data-track]');
-    var trackResult = document.getElementById('angular-track-result');
-    var trackMessages = {
-      assets: 'Assets: build the protected portfolio list first. Your Angular route will be /assets.',
-      blogs: 'Blogs: build the public feed first, then add authenticated comments. Your Angular route will be /blogs.',
-      both: 'Assets + blogs: share auth and the interceptor, then use the navigation tabs to switch between /assets and /blogs.',
-    };
-    trackButtons.forEach(function (button) {
-      button.addEventListener('click', function () {
-        trackButtons.forEach(function (item) { item.classList.toggle('active', item === button); });
-        trackResult.textContent = trackMessages[button.dataset.track];
+    var featureTabs = document.querySelectorAll('.feature-tab');
+    var featurePanels = document.querySelectorAll('.feature-panel');
+    featureTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        featureTabs.forEach(function (item) { item.setAttribute('aria-selected', String(item === tab)); });
+        featurePanels.forEach(function (panel) { panel.toggleAttribute('hidden', panel.id !== tab.getAttribute('aria-controls')); });
       });
     });
   })();
